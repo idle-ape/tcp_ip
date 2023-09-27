@@ -82,9 +82,11 @@ int main(int argc, char *argv[])
         if (pid == 0) // 子进程运行区域
         {
             close(serv_sock);
-            while (read_len = read(clnt_sock, buf, BUF_SIZE) > 0)
+            // while (read_len = read(clnt_sock, buf, BUF_SIZE) > 0) 不能用这种写法，
+            // 这相当于 t = (read(clnt_sock, buf, BUF_SIZE) > 0))，t会是0或者1
+            while ((read_len = read(clnt_sock, buf, BUF_SIZE)) > 0)
             {
-                printf("read %s from %s:%d\n", buf, inet_ntoa(clnt_addr.sin_addr), ntohs(clnt_addr.sin_port));
+                printf("read %s from %s:%d, len: %d\n", buf, inet_ntoa(clnt_addr.sin_addr), ntohs(clnt_addr.sin_port), read_len);
                 write(clnt_sock, buf, read_len);
             }
 
