@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
             break;
         }
 
-        write(client_socket, &message, sizeof(message));
+        write(client_socket, &message, strlen(message));
         read_len = read(client_socket, &message, sizeof(message));
         printf("Message from server: %s", message);
         message[read_len] = 0;
