@@ -15,7 +15,7 @@
 #include <sys/epoll.h>
 #include "error_handling.h"
 
-#define BUF_SIZE 1024
+#define BUF_SIZE 4 // 调整为4，验证 LT 模式下（默认为LT模式），当缓冲区中有数据时会一直触发事件；而 ET （边缘触发）模式下，只会触发一次
 #define MAX_EVENTS 100
 
 int main(int argc, char *argv[])
@@ -46,21 +46,21 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_addr.sin_port = htons(atoi(argv[1]));
 
-    if (bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
+    if (bind(listenfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
     {
         error_handling("bind() error: %s", strerror(errno));
     }
-    
+
     if (listen(listenfd, 100) == -1)
     {
         error_handling("listen() error: %s", strerror(errno));
     }
-    
+
     epfd = epoll_create(1024);
 
     event.events = EPOLLIN;
     event.data.fd = listenfd;
-    if(epoll_ctl(epfd, EPOLL_CTL_ADD, listenfd, &event) != 0)
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, listenfd, &event) != 0)
     {
         error_handling("epoll_ctl() error: %s", strerror(errno));
     }
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
         {
             error_handling("epoll_wait() error: %s", strerror(errno));
         }
-        
+
         printf("epoll_wait return, events len: %d\n", n);
         for (size_t i = 0; i < n; i++)
         {
@@ -85,14 +85,15 @@ int main(int argc, char *argv[])
                 printf("new connection, client fd: %d\n", clntfd);
 
                 // add the client fd to the epoll
-                event.events = EPOLLIN;
+                // event.events = EPOLLIN;
+                event.events = EPOLLIN | EPOLLET;
                 event.data.fd = clntfd;
                 if (epoll_ctl(epfd, EPOLL_CTL_ADD, clntfd, &event) != 0)
                 {
                     error_handling("epoll_ctl() error: %s", strerror(errno));
                 }
             }
-            else 
+            else
             {
                 if (events[i].events & EPOLLIN)
                 {
@@ -104,9 +105,9 @@ int main(int argc, char *argv[])
                         epoll_ctl(epfd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
                         continue;
                     }
-                    
+
                     buf[read_len] = 0;
-                    printf("receive message from client: %s", buf);
+                    printf("receive message from client: %s\n", buf);
 
                     write(events[i].data.fd, buf, strlen(buf));
                 }
