@@ -85,8 +85,8 @@ int main(int argc, char *argv[])
                 printf("new connection, client fd: %d\n", clntfd);
 
                 // add the client fd to the epoll
-                // event.events = EPOLLIN;
-                event.events = EPOLLIN | EPOLLET;
+                event.events = EPOLLIN;
+                // event.events = EPOLLIN | EPOLLET;
                 event.data.fd = clntfd;
                 if (epoll_ctl(epfd, EPOLL_CTL_ADD, clntfd, &event) != 0)
                 {
@@ -109,7 +109,19 @@ int main(int argc, char *argv[])
                     buf[read_len] = 0;
                     printf("receive message from client: %s\n", buf);
 
+                    event.data.ptr = buf;
+                    event.data.fd = events[i].data.fd;
+                    event.events = EPOLLOUT;
+                    epoll_ctl(epfd, EPOLL_CTL_MOD, events[i].data.fd, &event); // 修改标识符，等待下一个循环时发送数据，异步处理的精髓
+                }
+                else if (events[i].events & EPOLLOUT)
+                {
+                    // char buf[] = (char *)events[i].data.ptr;
+                    printf("epoll out, fd: %d, message: %s", events[i].data.fd, buf);
                     write(events[i].data.fd, buf, strlen(buf));
+                    event.data.fd = events[i].data.fd;
+                    event.events = EPOLLIN;
+                    epoll_ctl(epfd, EPOLL_CTL_MOD, events[i].data.fd, &event); // 修改标识符，等待下一个循环时接收数据
                 }
             }
         }
